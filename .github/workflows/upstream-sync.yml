@@ -1,32 +1,41 @@
-name: Compile Domain Lists from JSON
+name: Sync upstream vernette/rulesets
+
+# Ежедневный синк данных с upstream + повторное наложение awgm-патчей и
+# пересборка .srs пиновым sing-box. Данные (json/, генераторы) берутся из
+# upstream целиком, наши дельты живут ТОЛЬКО в scripts/apply_awgm_patches.py —
+# merge-конфликтов не бывает по построению.
 on:
-  push:
-    paths:
-      - "json/*.json"
+  schedule:
+    - cron: "17 4 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  compile:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Take upstream data wholesale
+        run: |
+          git remote add upstream https://github.com/vernette/rulesets
+          git fetch upstream master
+          git checkout upstream/master -- json/ raw/ convert_json_to_txt.py sync_unavailable_in_russia.py requirements.txt README.md || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+      - name: Re-apply awgm patches
+        run: python3 scripts/apply_awgm_patches.py
+
       - name: Convert JSON to TXT
         run: python convert_json_to_txt.py
 
       - name: Install sing-box (пин = RequiredVersion awg-manager)
-        # НЕ latest: формат .srs, собранный более новым sing-box, может не
-        # читаться пиновой версией на роутере и в catalog-drift awg-manager.
-        # При бампе RequiredVersion в awg-manager — обновить версию здесь и в
-        # upstream-sync.yml.
         run: |
           VER=1.14.0-alpha.42
           curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/v${VER}/sing-box-${VER}-linux-amd64.tar.gz"
@@ -36,6 +45,7 @@ jobs:
 
       - name: Compile JSON to SRS
         run: |
+          mkdir -p raw srs
           for file in json/*.json; do
             filename=$(basename "$file" .json)
             sing-box rule-set compile "$file" -o "srs/${filename}.srs"
@@ -45,6 +55,6 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add raw/*.txt srs/*.srs
-          git commit -m "chore: auto-compile domain lists and rule-sets" || exit 0
+          git add -A json/ raw/ srs/ convert_json_to_txt.py sync_unavailable_in_russia.py requirements.txt README.md
+          git commit -m "chore: синк с upstream + awgm-патчи, пересборка srs" || exit 0
           git push
