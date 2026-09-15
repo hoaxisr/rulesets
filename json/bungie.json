@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "domain_suffix": [
+        "bungie.net",
+        "playfab.com",
+        "playfabapi.com"
+      ]
+    },
+    {
+      "ip_cidr": [
+        "172.97.56.0/22",
+        "199.38.212.0/22",
+        "205.209.16.0/21"
+      ]
+    }
+  ]
+}
