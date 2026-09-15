@@ -1,0 +1,3 @@
+bungie.net
+playfab.com
+playfabapi.com

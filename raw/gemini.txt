@@ -4,3 +4,4 @@ gemini.google.com
 generativelanguage.googleapis.com
 proactivebackend-pa.googleapis.com
 robinfrontend-pa.googleapis.com
+signaler-pa.clients6.google.com
