@@ -1,0 +1,48 @@
+name: Build rule-set catalog
+on:
+  schedule:
+    - cron: "37 5 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "srs/**"
+  workflow_run:
+    workflows:
+      - "Compile Domain Lists from JSON"
+      - "Sync upstream vernette/rulesets"
+    types: [completed]
+
+concurrency: catalog
+
+permissions:
+  contents: write
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Test
+        run: python -m unittest scripts.test_build_catalog
+
+      - name: Build catalog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/build_catalog.py
+
+      - name: Commit and push
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add catalog.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: update rule-set catalog"
+          for i in 1 2 3; do
+            git pull --rebase && git push && exit 0
+          done
+          exit 1
