@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.build_catalog import build, changed
+from scripts.build_catalog import build, changed, enough_names, MIN_SAGER_NAMES
 
 NOW = "2026-10-22T19:00:00Z"
 SAGER = "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-{}.srs"
@@ -53,3 +53,11 @@ class ChangedTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FloorTest(unittest.TestCase):
+    def test_floor_boundary(self):
+        # Catches: an empty or truncated sagernet listing replacing the published index.
+        self.assertEqual(MIN_SAGER_NAMES, 1000)
+        self.assertFalse(enough_names(["geosite-a%d.srs" % i for i in range(999)]))
+        self.assertTrue(enough_names(["geosite-a%d.srs" % i for i in range(1000)]))

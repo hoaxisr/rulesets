@@ -11,6 +11,7 @@ TREE_API = "https://api.github.com/repos/SagerNet/sing-geosite/git/trees/rule-se
 NAME = re.compile(r"[A-Za-z0-9._@!-]{1,128}")
 GEOSITE = re.compile(r"geosite-(.*)\.srs")
 OWN = re.compile(r"(.*)\.srs")
+MIN_SAGER_NAMES = 1000
 
 
 def names(paths, pattern):
@@ -20,6 +21,10 @@ def names(paths, pattern):
         if m and NAME.fullmatch(m.group(1)):
             out.add(m.group(1))
     return sorted(out)
+
+
+def enough_names(geosite_paths):
+    return len(names(geosite_paths, GEOSITE)) >= MIN_SAGER_NAMES
 
 
 def build(geosite_paths, own_files, now):
@@ -60,7 +65,11 @@ def main():
     except FileNotFoundError:
         old = None
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    new = build(fetch_tree(), os.listdir(os.path.join(root, "srs")), now)
+    tree = fetch_tree()
+    if not enough_names(tree):
+        print("sagernet listing too small, catalog kept", file=sys.stderr)
+        return 1
+    new = build(tree, os.listdir(os.path.join(root, "srs")), now)
     if not changed(old, new):
         print("catalog unchanged")
         return 0
