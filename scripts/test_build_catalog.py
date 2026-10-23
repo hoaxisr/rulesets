@@ -51,13 +51,13 @@ class ChangedTest(unittest.TestCase):
         self.assertTrue(changed(None, self.base()))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class FloorTest(unittest.TestCase):
     def test_floor_boundary(self):
         # Catches: an empty or truncated sagernet listing replacing the published index.
         self.assertEqual(MIN_SAGER_NAMES, 1000)
         self.assertFalse(enough_names(["geosite-a%d.srs" % i for i in range(999)]))
         self.assertTrue(enough_names(["geosite-a%d.srs" % i for i in range(1000)]))
+
+
+if __name__ == "__main__":
+    unittest.main()
