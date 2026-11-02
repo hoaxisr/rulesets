@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-27T09:52:38Z",
+  "generated": "2026-11-02T12:35:36Z",
   "sources": [
     {
       "id": "sagernet",
@@ -1866,6 +1866,7 @@
         "weathercn",
         "webex",
         "webex@cn",
+        "webflow",
         "webnovel",
         "webnovel@!cn",
         "webtype",
