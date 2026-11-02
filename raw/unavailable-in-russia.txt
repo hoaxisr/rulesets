@@ -289,6 +289,7 @@ gamestop.com
 gaming.amazon.com
 gateway.pinata.cloud
 gemini.google.com
+geminiweb-pa.clients6.google.com
 generativelanguage.googleapis.com
 genspark.ai
 geolocation.onetrust.com
@@ -735,7 +736,6 @@ shopee.tw
 shouldianswer.net
 showtime.com
 siemens.com
-signaler-pa.clients6.google.com
 singlekey-id.com
 sketchup.com
 skyshowtime.com
