@@ -145,6 +145,7 @@ cybersecurity-help.cz
 daemon-tools.cc
 darkproject.eu
 databricks.com
+datadoghq.com
 dating.com
 daz3d.com
 deepl.com
@@ -736,7 +737,6 @@ shopee.tw
 shouldianswer.net
 showtime.com
 siemens.com
-signaler-pa.clients6.google.com
 singlekey-id.com
 sketchup.com
 skyshowtime.com
