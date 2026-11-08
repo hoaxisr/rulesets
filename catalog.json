@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-07T11:09:19Z",
+  "generated": "2026-11-08T11:21:32Z",
   "sources": [
     {
       "id": "sagernet",
@@ -119,6 +119,7 @@
         "annas-archive",
         "anon-v",
         "anthropic",
+        "anthropic@telemetry",
         "ap",
         "apa",
         "aparat",
