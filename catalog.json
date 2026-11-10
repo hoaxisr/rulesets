@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-08T11:21:32Z",
+  "generated": "2026-11-10T12:45:02Z",
   "sources": [
     {
       "id": "sagernet",
@@ -868,6 +868,7 @@
         "googlefcm@!cn",
         "goproxy",
         "gracg",
+        "grafanalabs",
         "grapheneos",
         "gravatar",
         "greatfire",
