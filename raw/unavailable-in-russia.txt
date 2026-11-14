@@ -47,6 +47,7 @@ att.com
 atwiki.jp
 audioscrobbler.com
 augmentcode.com
+aukro.cz
 autodesk.com
 autodesk.net
 av-connection.com
@@ -744,6 +745,7 @@ shopee.tw
 shouldianswer.net
 showtime.com
 siemens.com
+signaler-pa.clients6.google.com
 singlekey-id.com
 sketchup.com
 skyshowtime.com
