@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-10T12:45:02Z",
+  "generated": "2026-11-16T12:53:16Z",
   "sources": [
     {
       "id": "sagernet",
@@ -954,6 +954,8 @@
         "hupun",
         "hurricaneelectric",
         "huya",
+        "hypergryph",
+        "hypergryph@!cn",
         "ibkr",
         "ibm",
         "icable",
