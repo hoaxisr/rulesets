@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-16T12:53:16Z",
+  "generated": "2026-11-26T13:59:35Z",
   "sources": [
     {
       "id": "sagernet",
@@ -1766,6 +1766,7 @@
         "trackernetwork",
         "trae",
         "translatewiki",
+        "transtelecom",
         "trello",
         "trustasia",
         "trustwallet",
