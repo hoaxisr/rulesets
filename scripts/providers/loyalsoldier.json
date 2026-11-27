@@ -1,0 +1,13 @@
+{
+  "name": "Loyalsoldier",
+  "sources": [
+    {
+      "id": "loyalsoldier-geoip",
+      "url": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/{}.txt",
+      "tree": "Loyalsoldier/geoip@release",
+      "path": "text/([^/]+)\\.txt",
+      "floor": 200,
+      "examples": {"text/ru.txt": "ru", "text/google.txt": "google", "srs/ru.srs": null, "dat/ru.dat": null}
+    }
+  ]
+}
