@@ -248,6 +248,7 @@ class ProviderFileTest(unittest.TestCase):
             ("sagernet", provider("sagernet")),  # a built-in id
             ("demo", {"name": "", "sources": provider()["sources"]}),
             ("demo", {"name": "x" * 33, "sources": provider()["sources"]}),
+            ("demo", provider(name="ё" * 17)),  # 34 UTF-8 bytes
             ("demo", {"name": "Demo", "sources": []}),
             ("demo", dict(provider(), extra=1)),
             ("demo", provider(id="other-geoip")),  # another provider's prefix
@@ -293,6 +294,15 @@ class ProviderFileTest(unittest.TestCase):
             json.dump(provider("zeta", id="zeta-geo-geoip"), f)
         with self.assertRaises(ValueError):
             bc.load_providers(d)
+
+    def test_provider_count_includes_the_built_ins(self):
+        with tempfile.TemporaryDirectory() as d:
+            for i in range(bc.MAX_PROVIDERS - len(bc.SOURCES) + 1):
+                pid = "provider-%d" % i
+                with open(os.path.join(d, pid + ".json"), "w") as f:
+                    json.dump(provider(pid), f)
+            with self.assertRaisesRegex(ValueError, "including built-ins"):
+                bc.load_providers(d)
 
     def test_every_provider_in_this_repository_is_valid(self):
         # Catches: a committed provider file, or one of its examples, that the builder would refuse.
@@ -374,6 +384,27 @@ class PublishTest(unittest.TestCase):
         self.run_publish([])
         self.assertFalse(os.path.exists(os.path.join(self.root, "catalog", "demo.json")))
         self.assertNotIn("demo", [p["id"] for p in self.read("catalog.json")["providers"]])
+
+    def test_bad_previous_shape_is_not_used(self):
+        self.assertEqual(self.run_publish([demo()]), 0)
+        path = os.path.join(self.root, "catalog", "demo.json")
+        with open(path, "w") as f:
+            json.dump({"sources": [{"id": "demo-geoip", "url": []}]}, f)
+        self.ls["demo-geoip"] = None
+        self.assertEqual(self.run_publish([demo()]), 0)
+        self.assertFalse(os.path.exists(path))
+
+    def test_missing_builtin_refuses_to_publish_an_incomplete_index(self):
+        self.ls["sagernet"] = None
+        self.assertEqual(self.run_publish([demo()]), 1)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "catalog.json")))
+
+    def test_failed_shared_tree_is_listed_only_once(self):
+        src = demo().sources[0]
+        with mock.patch.object(bc, "fetch_tree", side_effect=OSError("offline")) as fetch:
+            got = bc.list_sources(self.root, [src, src._replace(id="demo-geosite")])
+        self.assertEqual(got, {"demo-geoip": None, "demo-geosite": None})
+        fetch.assert_called_once_with(src.tree)
 
     def test_corrupt_previous_file_is_rebuilt(self):
         # Catches: a damaged catalog file crashing every later run.

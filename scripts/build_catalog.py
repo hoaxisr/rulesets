@@ -19,6 +19,7 @@ MIN_SAGER_NAMES = 1000
 # FIRC refuses a list body over 8 MiB (FIRC_SUB_FETCH_MAX_BODY_BYTES) and a catalog over 1 MiB.
 MAX_LIST_BYTES = 8 * 1024 * 1024
 MAX_CATALOG_BYTES = 512 * 1024
+MAX_PROVIDERS = 64  # Includes the two built-in sources.
 # Optional providers: scripts/providers/<id>.json in, catalog/<id>.json out. A router fetches a provider's file only
 # once its owner turns that provider on; catalog.json carries the built-in sources and the list of providers.
 PROVIDERS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "providers")
@@ -96,8 +97,8 @@ def check_provider(pid, data):
     if not isinstance(data, dict) or set(data) - {"name", "sources"}:
         bad("only name and sources are allowed")
     name = data.get("name")
-    if not isinstance(name, str) or not 0 < len(name) <= 32 or not name.isprintable():
-        bad("name is 1 to 32 printable characters")
+    if not isinstance(name, str) or not name.isprintable() or not 0 < len(name.encode("utf-8")) <= 32:
+        bad("name is printable and between 1 and 32 UTF-8 bytes")
     if not isinstance(data.get("sources"), list) or not data["sources"]:
         bad("sources is a non-empty list")
     out = []
@@ -143,6 +144,8 @@ def load_providers(directory=PROVIDERS_DIR):
                 raise ValueError("source id %s is used twice" % s.id)
             seen.add(s.id)
         providers.append(p)
+    if len(providers) + len(SOURCES) > MAX_PROVIDERS:
+        raise ValueError("more than %d providers, including built-ins" % MAX_PROVIDERS)
     return providers
 
 
@@ -185,8 +188,14 @@ def list_sources(root, sources=SOURCES):
                 out[src.id] = [(f, os.path.getsize(os.path.join(d, f))) for f in os.listdir(d)]
             else:
                 if src.tree not in trees:  # sources of one provider often share a tree
-                    trees[src.tree] = fetch_tree(src.tree)
-                out[src.id] = trees[src.tree]
+                    try:
+                        trees[src.tree] = fetch_tree(src.tree)
+                    except (OSError, ValueError, KeyError) as e:
+                        trees[src.tree] = e
+                tree = trees[src.tree]
+                if isinstance(tree, Exception):
+                    raise tree
+                out[src.id] = tree
         except (OSError, ValueError, KeyError) as e:
             print("::warning::%s not listed: %s" % (src.id, e), file=sys.stderr)
             out[src.id] = None
@@ -200,7 +209,18 @@ def read_json(path):
             got = json.load(f)
     except (FileNotFoundError, ValueError):
         return None
-    return got if isinstance(got, dict) else None
+    sources = got.get("sources") if isinstance(got, dict) else None
+    if not isinstance(sources, list):
+        return None
+    for src in sources:
+        if (not isinstance(src, dict)
+                or not isinstance(src.get("id"), str) or not ID.fullmatch(src["id"])
+                or not isinstance(src.get("url"), str) or not src["url"].startswith(RAW_PREFIX)
+                or src["url"].count("{}") != 1
+                or not isinstance(src.get("names"), list)
+                or any(not isinstance(n, str) or not NAME.fullmatch(n) for n in src["names"])):
+            return None
+    return got
 
 
 def publish(root, providers, list_all, now):
@@ -213,6 +233,9 @@ def publish(root, providers, list_all, now):
                                        providers, old, old_files)
     for sid in stale:
         print("::warning::%s listing missing or too small, previous names kept" % sid, file=sys.stderr)
+    if {s["id"] for s in main_cat["sources"]} != set(BUILTIN_NAMES):
+        print("missing a built-in source; catalog kept", file=sys.stderr)
+        return 1
     bodies = {out: (old, main_cat)}
     bodies.update({os.path.join(out_dir, pid + ".json"): (old_files.get(pid), c) for pid, c in files.items()})
     for path, (_, cat) in bodies.items():

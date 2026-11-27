@@ -12,7 +12,7 @@ interval like any other subscription.
 
   FIRC versions that predate `providers` ignore it and see the same catalog as before.
 - `catalog/<provider>.json` — one optional provider's sources, in the same format (`generated`, `sources`).
-  - A router fetches it only once its owner turns that provider on.
+  - The WebUI asks for it when the owner has enabled the provider and searches for a preset.
   - Every source id in it is the provider id, or the provider id and a dash (`loyalsoldier-geoip`).
 
 | id | What | URL template | Names from |
@@ -43,6 +43,8 @@ Add `scripts/providers/<id>.json`, plus `scripts/providers/<id>.md` with its not
 }
 ```
 
+The index supports up to 64 providers including the two built-ins. Display names take 1–32 printable UTF-8 bytes.
+
 Each field of a source:
 - `tree` is listed through one GitHub Trees API call.
 - `path` captures the name from each file path.
@@ -57,6 +59,7 @@ needed: `build_catalog.py` picks the file up and writes `catalog/<id>.json`.
 `Build rule-set catalog` (`catalog.yml`) lists every source again, daily and after the workflows that
 change rule-sets.
 - A source that cannot be listed, or comes back with fewer names than its floor, keeps its previous names. Other sources and providers are not affected.
+- If a built-in source is unavailable and has no previous listing to reuse, publication is skipped.
 - A provider with no source at all is left out of `providers` and gets no file.
 - Provider files are written before `catalog.json`, in the same commit.
 - A file over 512 KiB (half of FIRC's 1 MiB cap) is not written, and the previous files stay.
