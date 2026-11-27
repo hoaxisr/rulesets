@@ -1,0 +1,13 @@
+{
+  "name": "V2Fly",
+  "sources": [
+    {
+      "id": "v2fly-geoip",
+      "url": "https://raw.githubusercontent.com/v2fly/geoip/release/text/{}.txt",
+      "tree": "v2fly/geoip@release",
+      "path": "text/([^/]+)\\.txt",
+      "floor": 200,
+      "examples": {"text/ru.txt": "ru", "text/private.txt": "private", "dat/ru.dat": null}
+    }
+  ]
+}
