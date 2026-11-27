@@ -1,0 +1,21 @@
+{
+  "name": "RunetFreedom",
+  "sources": [
+    {
+      "id": "runetfreedom-geosite",
+      "url": "https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/sing-box/rule-set-geosite/geosite-{}.srs",
+      "tree": "runetfreedom/russia-v2ray-rules-dat@release",
+      "path": "sing-box/rule-set-geosite/geosite-([^/]+)\\.srs",
+      "floor": 1000,
+      "examples": {"sing-box/rule-set-geosite/geosite-ru-blocked.srs": "ru-blocked", "sing-box/rule-set-geosite/geosite-category-social-media-!cn@cn.srs": "category-social-media-!cn@cn", "sing-box/rule-set-geoip/geoip-ru.srs": null, "geosite.dat": null}
+    },
+    {
+      "id": "runetfreedom-geoip",
+      "url": "https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/sing-box/rule-set-geoip/geoip-{}.srs",
+      "tree": "runetfreedom/russia-v2ray-rules-dat@release",
+      "path": "sing-box/rule-set-geoip/geoip-([^/]+)\\.srs",
+      "floor": 200,
+      "examples": {"sing-box/rule-set-geoip/geoip-ru-blocked.srs": "ru-blocked", "sing-box/rule-set-geoip/geoip-ru.srs": "ru", "sing-box/rule-set-geosite/geosite-ru.srs": null}
+    }
+  ]
+}
