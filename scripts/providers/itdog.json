@@ -1,0 +1,53 @@
+{
+  "name": "ITDog",
+  "sources": [
+    {
+      "id": "itdog-services",
+      "url": "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/{}.lst",
+      "tree": "itdoginfo/allow-domains@main",
+      "path": "Services/([a-z0-9_-]+)\\.lst",
+      "floor": 8,
+      "examples": {"Services/discord.lst": "discord", "Services/google_ai.lst": "google_ai", "Categories/anime.lst": null}
+    },
+    {
+      "id": "itdog-categories",
+      "url": "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Categories/{}.lst",
+      "tree": "itdoginfo/allow-domains@main",
+      "path": "Categories/([a-z0-9_-]+)\\.lst",
+      "floor": 3,
+      "examples": {"Categories/anime.lst": "anime", "Services/discord.lst": null}
+    },
+    {
+      "id": "itdog-ipv4",
+      "url": "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Subnets/IPv4/{}.lst",
+      "tree": "itdoginfo/allow-domains@main",
+      "path": "Subnets/IPv4/([a-z0-9_-]+)\\.lst",
+      "floor": 5,
+      "examples": {"Subnets/IPv4/discord.lst": "discord", "Subnets/IPv4/Discord.lst": null, "Subnets/IPv6/discord.lst": null}
+    },
+    {
+      "id": "itdog-ipv6",
+      "url": "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Subnets/IPv6/{}.lst",
+      "tree": "itdoginfo/allow-domains@main",
+      "path": "Subnets/IPv6/([a-z0-9_-]+)\\.lst",
+      "floor": 5,
+      "examples": {"Subnets/IPv6/telegram.lst": "telegram", "Subnets/IPv6/Meta.lst": null}
+    },
+    {
+      "id": "itdog-russia",
+      "url": "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/{}-raw.lst",
+      "tree": "itdoginfo/allow-domains@main",
+      "path": "Russia/([a-z]+)-raw\\.lst",
+      "floor": 2,
+      "examples": {"Russia/inside-raw.lst": "inside", "Russia/outside-raw.lst": "outside", "Russia/inside-clashx.lst": null, "Ukraine/inside-raw.lst": null}
+    },
+    {
+      "id": "itdog-ukraine",
+      "url": "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Ukraine/{}-raw.lst",
+      "tree": "itdoginfo/allow-domains@main",
+      "path": "Ukraine/([a-z]+)-raw\\.lst",
+      "floor": 1,
+      "examples": {"Ukraine/inside-raw.lst": "inside", "Ukraine/inside-kvas.lst": null}
+    }
+  ]
+}
