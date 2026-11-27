@@ -1,5 +1,8 @@
 import io
 import json
+import os
+import shutil
+import tempfile
 import unittest
 import urllib.error
 from unittest import mock
@@ -221,6 +224,171 @@ class SizeTest(unittest.TestCase):
         got, _ = build(listings(**{k.replace("-", "_"): [LAYOUT[k] % tag(i) for i in range(n)]
                                    for k, n in counts.items()}), NOW)
         self.assertLess(len(encode(got).encode()), MAX_CATALOG_BYTES)
+
+
+def provider(pid="demo", name="Demo", **over):
+    src = {"id": pid + "-geoip", "url": "https://raw.githubusercontent.com/o/r/release/text/{}.txt",
+           "tree": "o/r@release", "path": r"text/([^/]+)\.txt", "floor": 1,
+           "examples": {"text/ru.txt": "ru", "srs/ru.srs": None}}
+    src.update(over)
+    return {"name": name, "sources": [src]}
+
+
+class ProviderFileTest(unittest.TestCase):
+    def test_a_good_file_loads(self):
+        # Catches: a valid provider being refused, or its path pattern not compiled.
+        p = bc.check_provider("demo", provider())
+        self.assertEqual((p.id, p.name, [s.id for s in p.sources]), ("demo", "Demo", ["demo-geoip"]))
+        self.assertEqual(bc.names(["text/us.txt", "text/a/b.txt"], p.sources[0].path), ["us"])
+
+    def test_bad_files_are_refused(self):
+        # Catches: a provider file that would make FIRC refuse the whole catalog, or claim another's sources.
+        cases = [
+            ("bad!id", provider()),  # file name is not an id
+            ("sagernet", provider("sagernet")),  # a built-in id
+            ("demo", {"name": "", "sources": provider()["sources"]}),
+            ("demo", {"name": "x" * 33, "sources": provider()["sources"]}),
+            ("demo", {"name": "Demo", "sources": []}),
+            ("demo", dict(provider(), extra=1)),
+            ("demo", provider(id="other-geoip")),  # another provider's prefix
+            ("demo", provider(id="demox")),  # prefix without the dash
+            ("demo", provider(id="demo_geoip")),  # not an id FIRC accepts
+            ("demo", provider(url="https://example.com/{}.txt")),
+            ("demo", provider(url="https://raw.githubusercontent.com/o/r/{}/{}.txt")),
+            ("demo", provider(url="https://raw.githubusercontent.com/o/r/a.txt")),
+            ("demo", provider(tree="o/r")),
+            ("demo", provider(path="text/.*\\.txt")),  # captures nothing
+            ("demo", provider(path="(text)/(.*)\\.txt")),  # captures twice
+            ("demo", provider(path="(")),
+            ("demo", provider(floor=0)),
+            ("demo", provider(floor=True)),
+            ("demo", provider(examples={})),
+            ("demo", provider(examples={"text/ru.txt": "us"})),  # an example the pattern contradicts
+            ("demo", provider(examples={"srs/ru.srs": None})),  # no positive example
+        ]
+        for pid, data in cases:
+            with self.subTest(pid=pid, data=data):
+                with self.assertRaises(ValueError):
+                    bc.check_provider(pid, data)
+
+    def test_directory_is_loaded_in_order_and_ids_are_unique(self):
+        # Catches: output depending on directory order, or two providers publishing one source id.
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d)
+        for pid in ("zeta", "alpha"):
+            with open(os.path.join(d, pid + ".json"), "w") as f:
+                json.dump(provider(pid), f)
+        with open(os.path.join(d, "alpha.md"), "w") as f:
+            f.write("notes are not providers")
+        self.assertEqual([p.id for p in bc.load_providers(d)], ["alpha", "zeta"])
+        with open(os.path.join(d, "zeta.json"), "w") as f:
+            json.dump(provider("zeta", id="zeta"), f)
+        with open(os.path.join(d, "zeta-geo.json"), "w") as f:
+            json.dump(provider("zeta-geo", id="zeta-geo"), f)
+        bc.load_providers(d)
+        # zeta-geo-geoip fits both zeta- and zeta-geo-; two files claiming it must not load.
+        with open(os.path.join(d, "zeta-geo.json"), "w") as f:
+            json.dump(provider("zeta-geo", id="zeta-geo-geoip"), f)
+        with open(os.path.join(d, "zeta.json"), "w") as f:
+            json.dump(provider("zeta", id="zeta-geo-geoip"), f)
+        with self.assertRaises(ValueError):
+            bc.load_providers(d)
+
+    def test_every_provider_in_this_repository_is_valid(self):
+        # Catches: a committed provider file, or one of its examples, that the builder would refuse.
+        for p in bc.load_providers():
+            self.assertTrue(p.sources)
+
+
+def demo(pid="demo", floor=1):
+    return bc.check_provider(pid, provider(pid, pid.title(), floor=floor))
+
+
+class BuildAllTest(unittest.TestCase):
+    def test_builtins_stay_in_catalog_json_and_providers_get_their_own_file(self):
+        # Catches: optional providers leaking into the file every router downloads, or old FIRC losing sources.
+        ls = listings(sagernet=["geosite-a.srs"], hoaxisr=["b.srs"])
+        ls["demo-geoip"] = ["text/ru.txt", "text/us.txt"]
+        main, files, stale = bc.build_all(ls, NOW, [demo()])
+        self.assertEqual(stale, [])
+        self.assertEqual([s["id"] for s in main["sources"]], ["sagernet", "hoaxisr"])
+        self.assertEqual(main["providers"], [{"id": "sagernet", "name": "SagerNet"},
+                                             {"id": "hoaxisr", "name": "hoaxisr"}, {"id": "demo", "name": "Demo"}])
+        self.assertEqual(files, {"demo": {"generated": NOW, "sources": [
+            {"id": "demo-geoip", "url": "https://raw.githubusercontent.com/o/r/release/text/{}.txt",
+             "names": ["ru", "us"]}]}})
+
+    def test_provider_with_nothing_is_not_listed(self):
+        # Catches: catalog.json naming a provider whose file was not written.
+        ls = listings()
+        ls["demo-geoip"] = None
+        main, files, stale = bc.build_all(ls, NOW, [demo()])
+        self.assertEqual(stale, ["demo-geoip"])
+        self.assertEqual(files, {})
+        self.assertNotIn("demo", [p["id"] for p in main["providers"]])
+
+    def test_provider_keeps_its_previous_names_when_it_fails(self):
+        # Catches: one provider's outage emptying its file or touching another provider.
+        ls = listings()
+        ls["demo-geoip"], ls["other-geoip"] = ["text/ru.txt"], ["text/us.txt"]
+        _, before, _ = bc.build_all(ls, NOW, [demo(), demo("other")])
+        ls["demo-geoip"] = None
+        ls["other-geoip"] = ["text/us.txt", "text/de.txt"]
+        main, files, stale = bc.build_all(ls, NOW, [demo(), demo("other")], None, before)
+        self.assertEqual(stale, ["demo-geoip"])
+        self.assertEqual(files["demo"]["sources"], before["demo"]["sources"])
+        self.assertEqual(files["other"]["sources"][0]["names"], ["de", "us"])
+
+
+class PublishTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root)
+        self.ls = listings(sagernet=["geosite-a.srs"], hoaxisr=["b.srs"])
+        self.ls["demo-geoip"] = ["text/ru.txt"]
+
+    def run_publish(self, providers, now=NOW):
+        return bc.publish(self.root, providers, lambda sources: self.ls, now)
+
+    def read(self, *path):
+        with open(os.path.join(self.root, *path)) as f:
+            return json.load(f)
+
+    def test_writes_catalog_and_provider_files(self):
+        # Catches: a missing provider file, or catalog.json written with the provider list but no file.
+        self.assertEqual(self.run_publish([demo()]), 0)
+        self.assertEqual([p["id"] for p in self.read("catalog.json")["providers"]], ["sagernet", "hoaxisr", "demo"])
+        self.assertEqual(self.read("catalog", "demo.json")["sources"][0]["names"], ["ru"])
+
+    def test_unchanged_run_writes_nothing(self):
+        # Catches: a commit every day because the timestamp moved.
+        self.run_publish([demo()])
+        stamp = os.path.getmtime(os.path.join(self.root, "catalog", "demo.json"))
+        self.assertEqual(self.run_publish([demo()], "2030-01-01T00:00:00Z"), 0)
+        self.assertEqual(self.read("catalog.json")["generated"], NOW)
+        self.assertEqual(os.path.getmtime(os.path.join(self.root, "catalog", "demo.json")), stamp)
+
+    def test_removed_provider_file_is_deleted(self):
+        # Catches: a provider dropped from the repository still being served to routers.
+        self.run_publish([demo()])
+        self.run_publish([])
+        self.assertFalse(os.path.exists(os.path.join(self.root, "catalog", "demo.json")))
+        self.assertNotIn("demo", [p["id"] for p in self.read("catalog.json")["providers"]])
+
+    def test_corrupt_previous_file_is_rebuilt(self):
+        # Catches: a damaged catalog file crashing every later run.
+        self.run_publish([demo()])
+        with open(os.path.join(self.root, "catalog", "demo.json"), "w") as f:
+            f.write("{")
+        self.assertEqual(self.run_publish([demo()]), 0)
+        self.assertEqual(self.read("catalog", "demo.json")["sources"][0]["names"], ["ru"])
+
+    def test_oversized_catalog_writes_nothing(self):
+        # Catches: publishing a file FIRC would refuse; the previous files stay.
+        self.run_publish([demo()])
+        self.ls["demo-geoip"] = ["text/%s-%s.txt" % ("x" * 100, i) for i in range(6000)]
+        self.assertEqual(self.run_publish([demo()]), 1)
+        self.assertEqual(self.read("catalog", "demo.json")["sources"][0]["names"], ["ru"])
 
 
 if __name__ == "__main__":
